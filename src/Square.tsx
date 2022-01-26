@@ -1,5 +1,6 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Text } from 'react-native';
+import Animated, { FadeOutRight, FlipInYRight, Layout } from 'react-native-reanimated';
 
 export const COLOR = {
 	WHITE: '#ffffff',
@@ -17,7 +18,10 @@ interface SquareProps {
 
 const Square = ({ letter, size, color = COLOR.WHITE, textColor = COLOR.BLACK }: SquareProps) => {
 	return (
-		<View
+		<Animated.View
+			entering={FlipInYRight}
+			layout={Layout}
+			exiting={FadeOutRight}
 			style={{
 				width: size,
 				height: size,
@@ -27,7 +31,7 @@ const Square = ({ letter, size, color = COLOR.WHITE, textColor = COLOR.BLACK }: 
 				justifyContent: 'center',
 			}}>
 			<Text style={{ fontFamily: 'RobotoSlab-Bold', fontSize: 0.75 * size, color: textColor }}>{letter}</Text>
-		</View>
+		</Animated.View>
 	);
 };
 export default Square;
