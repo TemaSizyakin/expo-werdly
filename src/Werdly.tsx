@@ -2,34 +2,27 @@ import React, { useContext, useState } from 'react';
 import { View } from 'react-native';
 import Square, { COLOR } from './Square';
 import { WindowSizeContext } from './hooks/useWindowSize';
-import { useMemo } from 'react';
-import { State, TapGestureHandler, TapGestureHandlerStateChangeEvent } from 'react-native-gesture-handler';
+import Keyboard from './Keyboard';
 
 const Werdly = () => {
 	const window = useContext(WindowSizeContext);
-	const squareSize = useMemo(() => window.width / 8, [window]);
-	const [word, setWord] = useState('W');
-	// useEffect(() => {
-	// 	const WORD = 'WERDLY';
-	// 	setTimeout(() => {
-	// 		if (word.length < WORD.length) {
-	// 			setWord(WORD.substring(0, word.length + 1));
-	// 		}
-	// 	}, 250);
-	// }, [word]);
-	const onSingleTap = (event: TapGestureHandlerStateChangeEvent) => {
-		if (event.nativeEvent.state === State.ACTIVE) {
-			const WORD = 'WERDLY';
-			if (word.length < WORD.length) {
-				setWord(WORD.substring(0, word.length + 1));
-			} else {
-				setWord('W');
-			}
+	const squareSize = window.width / 8;
+	const [word, setWord] = useState('');
+
+	const onKeyPress = (key: string) => {
+		setWord(word + key);
+	};
+	const onEnterPress = () => {
+		setWord('');
+	};
+	const onDelPress = () => {
+		if (word.length > 0) {
+			setWord(word.substring(0, word.length - 1));
 		}
 	};
 
 	return (
-		<TapGestureHandler onHandlerStateChange={onSingleTap}>
+		<View style={{ flex: 1 }}>
 			<View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#2A5C80' }}>
 				{word.split('').map((l, i) => (
 					<Square
@@ -41,7 +34,8 @@ const Werdly = () => {
 					/>
 				))}
 			</View>
-		</TapGestureHandler>
+			<Keyboard onKeyPress={onKeyPress} onEnterPress={onEnterPress} onDelPress={onDelPress} />
+		</View>
 	);
 };
 

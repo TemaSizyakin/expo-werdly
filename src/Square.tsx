@@ -19,9 +19,9 @@ interface SquareProps {
 const Square = ({ letter, size, color = COLOR.WHITE, textColor = COLOR.BLACK }: SquareProps) => {
 	return (
 		<Animated.View
-			entering={FlipInYRight}
-			layout={Layout}
-			exiting={FadeOutRight}
+			entering={FlipInYRight.duration(200)}
+			layout={Layout.duration(200)}
+			exiting={FadeOutRight.duration(200)}
 			style={{
 				width: size,
 				height: size,
