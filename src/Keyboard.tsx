@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { Text, View } from 'react-native';
-import { WindowSizeContext } from './hooks/useWindowSize';
+import WindowSizeContext from './contexts/WindowSizeContext';
 import Animated, {
 	interpolateColor,
 	runOnJS,
@@ -68,8 +68,8 @@ interface KeyboardProps {
 
 const Keyboard = ({ onKeyPress, onEnterPress, onDelPress }: KeyboardProps) => {
 	const window = useContext(WindowSizeContext);
-	const keyWidth = window.width / 12;
-	const keyHeight = window.height / 12;
+	const keyWidth = window.width / (KEYS.reduce((acc, cur) => Math.max(acc, cur.length), 0) + 0.5);
+	const keyHeight = window.height / 4 / KEYS.length;
 	const keys: Array<KeyData> = KEYS.map((row: Array<string>, i) => {
 		const rowWidth = row.reduce((acc: number, cur: string) => acc + keyWidth * (WIDEKEYS.includes(cur) ? 1.5 : 1), 0);
 		let left = (window.width - rowWidth) / 2;
@@ -108,7 +108,7 @@ const Keyboard = ({ onKeyPress, onEnterPress, onDelPress }: KeyboardProps) => {
 			activeKey.value = '';
 		});
 	return (
-		<View style={{ position: 'absolute', bottom: 0, paddingVertical: keyHeight / 8, backgroundColor: '#00000022' }}>
+		<View style={{ position: 'absolute', bottom: 0, paddingVertical: keyWidth / 4, backgroundColor: '#00000022' }}>
 			<GestureDetector gesture={gesture}>
 				<View
 					style={{
