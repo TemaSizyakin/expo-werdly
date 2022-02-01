@@ -56,7 +56,7 @@ const Werdly = () => {
 	const window = useContext(WindowSizeContext);
 	const squareSize = window.width / 8;
 	const [language] = useState<LanguageName>('english');
-	const [words, setWords] = useState<Array<string>>([]);
+	const [words, setWords] = useState<Array<string>>(makeWords(Languages[language]));
 	const [answers, setAnswers] = useState<Array<string>>([]);
 	const [input, setInput] = useState<string>('');
 	const [level, setLevel] = useState<number>(0);
