@@ -1,12 +1,14 @@
 import React from 'react';
 import { Text } from 'react-native';
-import Animated, { FadeOutRight, FlipInYRight, Layout } from 'react-native-reanimated';
+import Animated, { FlipInYLeft, FlipInYRight, StretchOutX, Layout } from 'react-native-reanimated';
 
 export const COLOR = {
 	WHITE: '#ffffff',
 	BLACK: '#000000',
 	GREEN: '#81AA66',
 	BLUE: '#3B95D7',
+	RED: '#D85151',
+	DARKBLUE: '#24506F',
 };
 
 interface SquareProps {
@@ -14,14 +16,17 @@ interface SquareProps {
 	size: number;
 	color?: string;
 	textColor?: string;
+	isInput?: boolean;
 }
 
-const Square = ({ letter, size, color = COLOR.WHITE, textColor = COLOR.BLACK }: SquareProps) => {
+const DURATION = 250;
+
+const Square = ({ letter, size, color = COLOR.WHITE, textColor = COLOR.BLACK, isInput = false }: SquareProps) => {
 	return (
 		<Animated.View
-			entering={FlipInYRight.duration(200)}
-			layout={Layout.duration(200)}
-			exiting={FadeOutRight.duration(200)}
+			entering={isInput ? FlipInYRight.duration(DURATION) : FlipInYLeft.duration(DURATION)}
+			layout={Layout.duration(DURATION)}
+			exiting={isInput ? StretchOutX.duration(DURATION / 2) : StretchOutX.duration(DURATION / 2)}
 			style={{
 				width: size,
 				height: size,
@@ -29,6 +34,7 @@ const Square = ({ letter, size, color = COLOR.WHITE, textColor = COLOR.BLACK }: 
 				backgroundColor: color,
 				alignItems: 'center',
 				justifyContent: 'center',
+				zIndex: isInput ? 100 : 10,
 			}}>
 			<Text style={{ fontFamily: 'RobotoSlab-Bold', fontSize: 0.75 * size, color: textColor }}>{letter}</Text>
 		</Animated.View>

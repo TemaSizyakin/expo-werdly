@@ -14,9 +14,9 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 const KEYS: Array<Array<string>> = [
 	['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
 	['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-	['Enter', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Del'],
+	['New', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Del'],
 ];
-const WIDEKEYS: Array<string> = ['Enter', 'Del'];
+const WIDEKEYS: Array<string> = ['New', 'Del'];
 
 type KeyData = {
 	value: string,
@@ -100,7 +100,7 @@ const Keyboard = ({ onKeyPress, onEnterPress, onDelPress }: KeyboardProps) => {
 		.onFinalize(() => {
 			if (activeKey.value.length === 1) {
 				runOnJS(onKeyPress)(activeKey.value);
-			} else if (activeKey.value === 'Enter') {
+			} else if (activeKey.value === 'New') {
 				runOnJS(onEnterPress)();
 			} else if (activeKey.value === 'Del') {
 				runOnJS(onDelPress)();
