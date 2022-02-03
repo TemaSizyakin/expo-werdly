@@ -5,9 +5,14 @@ import Werdly from './src/Werdly';
 import { useFonts } from 'expo-font';
 import AppLoading from 'expo-app-loading';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StatusBar } from 'expo-status-bar';
+import { getTheme } from './src/contexts/Theme';
+import SettingsContext, { useSettingsContext } from './src/contexts/SettingsContext';
 
-export default function App() {
+function App() {
 	const [windowSize, onContainerLayout] = useWindowSizeContext();
+	const settings = useSettingsContext();
+	const theme = getTheme(settings.theme);
 
 	const [fontsLoaded] = useFonts({ 'RobotoSlab-Bold': require('./assets/fonts/RobotoSlab-Bold.ttf') });
 	if (!fontsLoaded) {
@@ -16,9 +21,14 @@ export default function App() {
 
 	return (
 		<WindowSizeContext.Provider value={windowSize}>
-			<GestureHandlerRootView style={{ flex: 1 }} onLayout={onContainerLayout}>
-				<Werdly />
-			</GestureHandlerRootView>
+			<SettingsContext.Provider value={settings}>
+				<GestureHandlerRootView style={{ flex: 1 }} onLayout={onContainerLayout}>
+					<StatusBar style={theme.barStyle} animated />
+					<Werdly />
+				</GestureHandlerRootView>
+			</SettingsContext.Provider>
 		</WindowSizeContext.Provider>
 	);
 }
+
+export default App;

@@ -8,14 +8,12 @@ import Animated, {
 	useDerivedValue,
 	useSharedValue,
 	withTiming,
+	ZoomInDown,
+	ZoomOutDown,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Ionicons } from '@expo/vector-icons';
 
-const KEYS: Array<Array<string>> = [
-	['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-	['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-	['New', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Del'],
-];
 const WIDEKEYS: Array<string> = ['New', 'Del'];
 
 type KeyData = {
@@ -37,6 +35,7 @@ const Key = ({ data: { value, x, y, width, height, wide }, activeKey }: { data: 
 		transform: [{ scale: 1 + 0.35 * isPressed.value }],
 		zIndex: 10 + isPressed.value * 10,
 	}));
+	const fontSize = Math.min(wide ? width / 1.5 : width, height) / 2;
 	return (
 		<Animated.View
 			style={[
@@ -46,42 +45,49 @@ const Key = ({ data: { value, x, y, width, height, wide }, activeKey }: { data: 
 					top: y + 0.05 * height,
 					width: 0.9 * width,
 					height: 0.9 * height,
-					borderRadius: 0.05 * height,
+					borderRadius: 0.05 * Math.max(width, height),
 					backgroundColor: '#ffffff',
 					alignItems: 'center',
 					justifyContent: 'center',
 				},
 				animatedStyle,
 			]}>
-			<Text style={{ fontFamily: 'RobotoSlab-Bold', fontSize: Math.min(wide ? width / 1.5 : width, height) / 2, color: 'white' }}>
-				{value}
-			</Text>
+			{value === 'Del' ? (
+				<Ionicons name="backspace" size={1.5 * fontSize} color="white" />
+			) : value === 'New' ? (
+				<Ionicons name="bulb" size={1.5 * fontSize} color="white" />
+			) : (
+				<Text style={{ fontFamily: 'RobotoSlab-Bold', fontSize, color: 'white' }}>{value}</Text>
+			)}
 		</Animated.View>
 	);
 };
 
 interface KeyboardProps {
+	keyboard: Array<Array<string>>;
 	onKeyPress: (key: string) => void;
 	onEnterPress: () => void;
 	onDelPress: () => void;
 }
 
-const Keyboard = ({ onKeyPress, onEnterPress, onDelPress }: KeyboardProps) => {
+const Keyboard = ({ keyboard, onKeyPress, onEnterPress, onDelPress }: KeyboardProps) => {
 	const window = useContext(WindowSizeContext);
-	const keyWidth = window.width / (KEYS.reduce((acc, cur) => Math.max(acc, cur.length), 0) + 0.5);
-	const keyHeight = window.height / 4 / KEYS.length;
-	const keys: Array<KeyData> = KEYS.map((row: Array<string>, i) => {
-		const rowWidth = row.reduce((acc: number, cur: string) => acc + keyWidth * (WIDEKEYS.includes(cur) ? 1.5 : 1), 0);
-		let left = (window.width - rowWidth) / 2;
-		const top = i * keyHeight;
-		return row.map((key: string) => {
-			const wide = WIDEKEYS.includes(key);
-			const width = wide ? 1.5 * keyWidth : keyWidth;
-			const keyData: KeyData = { value: key, x: left, y: top, width, height: keyHeight, wide };
-			left += wide ? 1.5 * keyWidth : keyWidth;
-			return keyData;
-		});
-	}).flat();
+	const keyWidth = window.width / (keyboard.reduce((acc, cur) => Math.max(acc, cur.length), 0) + 0.5);
+	const keyHeight = window.height / 4 / keyboard.length;
+	const keys: Array<KeyData> = keyboard
+		.map((row: Array<string>, i) => {
+			const rowWidth = row.reduce((acc: number, cur: string) => acc + keyWidth * (WIDEKEYS.includes(cur) ? 1.5 : 1), 0);
+			let left = (window.width - rowWidth) / 2;
+			const top = i * keyHeight;
+			return row.map((key: string) => {
+				const wide = WIDEKEYS.includes(key);
+				const width = wide ? 1.5 * keyWidth : keyWidth;
+				const keyData: KeyData = { value: key, x: left, y: top, width, height: keyHeight, wide };
+				left += wide ? 1.5 * keyWidth : keyWidth;
+				return keyData;
+			});
+		})
+		.flat();
 	const activeKey = useSharedValue('');
 	const checkActiveKey = ({ x, y }: { x: number, y: number }): string => {
 		'worklet';
@@ -108,17 +114,20 @@ const Keyboard = ({ onKeyPress, onEnterPress, onDelPress }: KeyboardProps) => {
 			activeKey.value = '';
 		});
 	return (
-		<View style={{ position: 'absolute', bottom: 0, paddingVertical: keyWidth / 4, backgroundColor: '#00000022' }}>
+		<View style={{ position: 'absolute', bottom: 0 }}>
 			<GestureDetector gesture={gesture}>
-				<View
+				<Animated.View
 					style={{
 						width: window.width,
 						height: keyHeight * 3,
-					}}>
+						backgroundColor: '#00000022',
+					}}
+					entering={ZoomInDown.duration(500)}
+					exiting={ZoomOutDown.duration(500)}>
 					{keys.map((key: KeyData, i) => (
 						<Key key={key.value + i} data={key} activeKey={activeKey} />
 					))}
-				</View>
+				</Animated.View>
 			</GestureDetector>
 		</View>
 	);

@@ -1,48 +1,26 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Vibration } from 'react-native';
+import { View, Vibration, Pressable, Text, Alert } from 'react-native';
 import Square, { COLOR } from './Square';
 import WindowSizeContext from './contexts/WindowSizeContext';
 import Keyboard from './Keyboard';
 import Animated, { Layout, useAnimatedStyle, useSharedValue, withTiming, withSequence, withSpring } from 'react-native-reanimated';
+import { getDateNumber, seedRandom } from './utils/Random';
+import Theme, { getTheme } from './contexts/Theme';
+import SettingsContext from './contexts/SettingsContext';
+import Language, { getLanguage } from './contexts/Language';
+import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 
-type Vocabulary = Array<Array<string>>;
-type Language = {
-	vocab: Vocabulary,
-	keyboard: Array<Array<string>>,
-	consonants: Array<string>,
-	vowels: Array<string>,
-};
-type LanguageName = 'english' | 'russian';
-const Languages: { [key: string]: Language } = {
-	english: {
-		vocab: require('../assets/json/english.json'),
-		keyboard: [
-			['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
-			['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
-			['New', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', 'Del'],
-		],
-		consonants: ['B', 'C', 'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Z'],
-		vowels: ['A', 'E', 'I', 'O', 'U', 'Y'],
-	},
-	russian: {
-		vocab: require('../assets/json/russian.json'),
-		keyboard: [
-			['Й', 'Ц', 'У', 'К', 'Е', 'Н', 'Г', 'Ш', 'Щ', 'З', 'Х', 'Ъ'],
-			['Ф', 'Ы', 'В', 'А', 'П', 'Р', 'О', 'Л', 'Д', 'Ж', 'Э'],
-			['New', 'Я', 'Ч', 'С', 'М', 'И', 'Т', 'Ь', 'Б', 'Ю', 'Del'],
-		],
-		consonants: ['Б', 'В', 'Г', 'Д', 'Ж', 'З', 'К', 'Л', 'М', 'Н', 'П', 'Р', 'С', 'Т', 'Ф', 'Х', 'Ц', 'Ч', 'Ш', 'Щ', 'Ъ', 'Ь'],
-		vowels: ['А', 'Е', 'И', 'О', 'У', 'Ы', 'Э', 'Ю', 'Я'],
-	},
-};
-const makeWords = (language: Language): Array<string> => {
+const makeWords = (language: Language, daily: boolean = false): Array<string> => {
+	const random = daily ? seedRandom(getDateNumber()) : Math.random;
+	random();
 	return language.vocab
-		.map(words => words[Math.floor(words.length * Math.random())])
+		.map(words => words[Math.floor(words.length * random())])
 		.map(word => {
 			const n = Math.floor(word.length / 2);
 			const set = new Set<number>();
 			while (set.size < n) {
-				set.add(Math.floor(word.length * Math.random()));
+				set.add(Math.floor(word.length * random()));
 			}
 			let casedWord = word.split('');
 			set.forEach(i => (casedWord[i] = casedWord[i].toUpperCase()));
@@ -50,13 +28,18 @@ const makeWords = (language: Language): Array<string> => {
 		});
 	// return ['CaSe', 'SCale', 'ChEeSe'];
 };
+const showWords = (words: Array<string>, lvl: number) => words.map((wrd, i) => (i === lvl ? wrd.toUpperCase() : wrd));
 const isUpperCase = (char: string): boolean => char === char.toUpperCase();
 
 const Werdly = () => {
 	const window = useContext(WindowSizeContext);
-	const squareSize = window.width / 8;
-	const [language] = useState<LanguageName>('english');
-	const [words, setWords] = useState<Array<string>>(makeWords(Languages[language]));
+	const settings = useContext(SettingsContext);
+	const theme: Theme = getTheme(settings.theme);
+	const language: Language = getLanguage(settings.language);
+	const squareSize = Math.min(window.width, window.height) / 8;
+	const iconSize = squareSize / 2;
+	const [daily, setDaily] = useState(true);
+	const [words, setWords] = useState<Array<string>>(makeWords(language, daily));
 	const [answers, setAnswers] = useState<Array<string>>([]);
 	const [input, setInput] = useState<string>('');
 	const [level, setLevel] = useState<number>(0);
@@ -71,7 +54,7 @@ const Werdly = () => {
 				shakeValue.value = withSequence(withTiming(squareSize / 10, { duration: 100 }), withSpring(0, { stiffness: 500 }));
 				Vibration.vibrate();
 			};
-			if (Languages[language].vocab[level].includes(input.toLowerCase())) {
+			if (language.vocab[level].includes(input.toLowerCase())) {
 				const wordArray = words[level].split('');
 				const casedInput = input
 					.split('')
@@ -95,20 +78,40 @@ const Werdly = () => {
 			setInput(input + key);
 		}
 	};
-	const onEnterPress = () => {
-		setLevel(0);
-		setWords(makeWords(Languages[language]));
-		setAnswers([]);
-		setInput('');
+	const onHelpPress = () => {
+		if (settings.language === 'russian') {
+			Alert.alert('Подсказка', 'Вы уверены, что хотите открыть слово?', [
+				{ text: 'Да', onPress: () => setWords(showWords(words, level)) },
+				{ text: 'Отмена', style: 'cancel' },
+			]);
+		} else {
+			Alert.alert('Help', 'Are you sure you want to reveal a word?', [
+				{ text: 'Yes', onPress: () => setWords(showWords(words, level)) },
+				{ text: 'Cancel', style: 'cancel' },
+			]);
+		}
+		// setWords(showWords(words, level));
 	};
 	const onDelPress = () => {
 		if (input.length > 0) {
 			setInput(input.substring(0, input.length - 1));
 		}
 	};
+	const onChangeLanguagePress = () => {
+		settings.toggleLanguage();
+		setLevel(0);
+		setAnswers([]);
+		setInput('');
+		setDaily(false);
+	};
+
+	useEffect(() => {
+		setWords(makeWords(language));
+		// console.log(settings.language, settings.theme);
+	}, [settings.language]);
 
 	return words.length > 0 ? (
-		<View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2A5C80' }}>
+		<View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.backgroundColor }}>
 			{words.map((word, j) =>
 				j < level ? (
 					<Animated.View
@@ -154,7 +157,40 @@ const Werdly = () => {
 					</Animated.View>
 				) : null,
 			)}
-			<Keyboard onKeyPress={onKeyPress} onEnterPress={onEnterPress} onDelPress={onDelPress} />
+			<Keyboard
+				key={'keyboard_' + settings.language}
+				keyboard={language.keyboard}
+				onKeyPress={onKeyPress}
+				onEnterPress={onHelpPress}
+				onDelPress={onDelPress}
+			/>
+			<Pressable
+				style={{ position: 'absolute', top: Constants.statusBarHeight + 0.5 * iconSize, right: 0.5 * iconSize }}
+				onPress={settings.toggleTheme}>
+				<Ionicons name="moon" size={iconSize} color={theme.iconColor} />
+			</Pressable>
+			<Pressable
+				style={{ position: 'absolute', top: Constants.statusBarHeight + 2 * iconSize, right: 0.5 * iconSize }}
+				onPress={onChangeLanguagePress}>
+				<Ionicons name="earth" size={iconSize} color={theme.iconColor} />
+			</Pressable>
+			{/*<Pressable*/}
+			{/*	style={{ position: 'absolute', top: Constants.statusBarHeight + 2 * iconSize, right: 2 * iconSize }}*/}
+			{/*	onPress={settings.load}>*/}
+			{/*	<Ionicons name="cloud-upload" size={iconSize} color={COLOR.BLUE} />*/}
+			{/*</Pressable>*/}
+			{/*<Pressable*/}
+			{/*	style={{ position: 'absolute', top: Constants.statusBarHeight + 2 * iconSize, right: 0.5 * iconSize }}*/}
+			{/*	onPress={settings.save}>*/}
+			{/*	<Ionicons name="cloud-download" size={iconSize} color={COLOR.BLUE} />*/}
+			{/*</Pressable>*/}
+			<Pressable
+				style={{ position: 'absolute', top: Constants.statusBarHeight + 0.5 * iconSize, left: 0.5 * iconSize }}
+				onPress={() => null}>
+				<Text style={{ fontFamily: 'RobotoSlab-Bold', fontSize: 0.75 * iconSize, color: theme.iconColor }}>
+					{(settings.language === 'russian' ? (daily ? 'Ежедневный' : 'Случайный') : daily ? 'Daily' : 'Random').toUpperCase()}
+				</Text>
+			</Pressable>
 		</View>
 	) : null;
 };

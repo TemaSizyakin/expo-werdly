@@ -3,7 +3,7 @@
     "name": "werdly",
     "slug": "werdly",
     "version": "0.9.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
@@ -25,10 +25,6 @@
         "backgroundColor": "#3B95D7"
       }
     },
-	"androidStatusBar": {
-	  "barStyle": "light-content",
-	  "backgroundColor": "#2A5C80"
-	},
 	"androidNavigationBar": {
 	  "barStyle": "light-content",
 	  "backgroundColor": "#2A5C80"
