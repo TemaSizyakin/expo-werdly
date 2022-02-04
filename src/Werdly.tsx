@@ -146,7 +146,21 @@ const Werdly = () => {
 	};
 
 	const onShare = () => {
-		const message = answers.map((word, i) => (word.length > 0 ? word.toUpperCase() : words[i].toUpperCase())).join('\n');
+		const title = settings.language === 'english' ? 'Werdly' : 'Вёрдли';
+		const date = new Date();
+		const day = date.getDate().toString().padStart(2, '0');
+		const month = (date.getMonth() + 1).toString().padStart(2, '0');
+		const year = date.getFullYear().toString();
+		const squares = answers.map((answer, i) =>
+			answer.length > 0
+				? answer
+						.split('')
+						.map(l => (isUpperCase(l) ? '🟩' : '🟦'))
+						.join('') + ` ${answer.toUpperCase()}`
+				: '⬜'.padEnd(words[i].length, '⬜') + ` ${words[i].toUpperCase()}`,
+		);
+		const header = title + (daily ? ` - ${day}/${month}/${year}` : ' - ♾️');
+		const message = [header, ...squares].join('\n');
 		Share.share({ message }).then();
 	};
 
