@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Vibration, Pressable, Text, Alert } from 'react-native';
+import { View, Vibration, Pressable, Text, Alert, Share } from 'react-native';
 import Square, { COLOR } from './Square';
 import WindowSizeContext from './contexts/WindowSizeContext';
 import Keyboard from './Keyboard';
@@ -28,7 +28,7 @@ const makeWords = (language: Language, daily: boolean = false): Array<string> =>
 		});
 	// return ['CaSe', 'SCale', 'ChEeSe'];
 };
-const showWords = (words: Array<string>, lvl: number) => words.map((wrd, i) => (i === lvl ? wrd.toUpperCase() : wrd));
+// const showWords = (words: Array<string>, lvl: number) => words.map((wrd, i) => (i === lvl ? wrd.toUpperCase() : wrd));
 const isUpperCase = (char: string): boolean => char === char.toUpperCase();
 
 const Werdly = () => {
@@ -41,12 +41,23 @@ const Werdly = () => {
 	const [daily, setDaily] = useState(true);
 	const [words, setWords] = useState<Array<string>>(makeWords(language, daily));
 	const [answers, setAnswers] = useState<Array<string>>([]);
+	const level = answers.length;
 	const [input, setInput] = useState<string>('');
-	const [level, setLevel] = useState<number>(0);
 	const shakeValue = useSharedValue(0);
 	const shakeStyle = useAnimatedStyle(() => ({
 		transform: [{ translateX: shakeValue.value }],
 	}));
+	const [isAlert, setIsAlert] = useState(true);
+
+	useEffect(() => {
+		setWords(makeWords(language, daily));
+		setInput('');
+		if (daily && settings.data.date === getDateNumber()) {
+			setAnswers(settings.data?.answers?.[settings.language] ?? []);
+		} else {
+			setAnswers([]);
+		}
+	}, [settings.language, daily, settings.data, language]);
 
 	useEffect(() => {
 		if (words.length > 0 && words[level] && input.length >= words[level].length) {
@@ -61,9 +72,20 @@ const Werdly = () => {
 					.map((l, i) => (isUpperCase(wordArray[i]) ? (wordArray[i] === l ? l : '') : l.toLowerCase()))
 					.join('');
 				if (casedInput.length === wordArray.length) {
-					setAnswers([...answers, casedInput]);
+					const newAnswers: Array<string> = [...answers, casedInput];
+					setAnswers(newAnswers);
 					setInput('');
-					setLevel(lvl => lvl + 1);
+					if (daily) {
+						const prevAnswers = settings.data?.answers;
+						if (settings.data.date === getDateNumber() && prevAnswers) {
+							settings.save({
+								date: getDateNumber(),
+								answers: { ...prevAnswers, [settings.language]: newAnswers },
+							});
+						} else {
+							settings.save({ date: getDateNumber(), answers: { [settings.language]: newAnswers } });
+						}
+					}
 				} else {
 					doShake();
 				}
@@ -71,44 +93,62 @@ const Werdly = () => {
 				doShake();
 			}
 		}
-	}, [words, input, level, shakeValue, squareSize, language, answers]);
+	}, [words, input, level, shakeValue, squareSize, language, answers, settings, daily]);
 
 	const onKeyPress = (key: string) => {
 		if (words[level] && input.length < words[level].length) {
 			setInput(input + key);
 		}
 	};
-	const onHelpPress = () => {
-		if (settings.language === 'russian') {
-			Alert.alert('Подсказка', 'Вы уверены, что хотите открыть слово?', [
-				{ text: 'Да', onPress: () => setWords(showWords(words, level)) },
-				{ text: 'Отмена', style: 'cancel' },
-			]);
-		} else {
-			Alert.alert('Help', 'Are you sure you want to reveal a word?', [
-				{ text: 'Yes', onPress: () => setWords(showWords(words, level)) },
-				{ text: 'Cancel', style: 'cancel' },
-			]);
+
+	const skipWord = () => {
+		const newAnswers = [...answers, ''];
+		setAnswers(newAnswers);
+		setInput('');
+		if (daily) {
+			const prevAnswers = settings.data?.answers;
+			if (settings.data.date === getDateNumber() && prevAnswers) {
+				settings.save({
+					date: getDateNumber(),
+					answers: { ...prevAnswers, [settings.language]: newAnswers },
+				});
+			} else {
+				settings.save({ date: getDateNumber(), answers: { [settings.language]: newAnswers } });
+			}
 		}
-		// setWords(showWords(words, level));
 	};
+
+	const onHelpPress = () => {
+		if (level < words.length) {
+			if (isAlert) {
+				if (settings.language === 'russian') {
+					Alert.alert('Подсказка', 'Вы уверены, что хотите открыть слово?', [
+						{ text: 'Да', onPress: skipWord },
+						{ text: 'Отмена', style: 'cancel' },
+					]);
+				} else {
+					Alert.alert('Help', 'Are you sure you want to reveal a word?', [
+						{ text: 'Yes', onPress: skipWord },
+						{ text: 'Cancel', style: 'cancel' },
+					]);
+				}
+				setIsAlert(false);
+			} else {
+				skipWord();
+			}
+		}
+	};
+
 	const onDelPress = () => {
 		if (input.length > 0) {
 			setInput(input.substring(0, input.length - 1));
 		}
 	};
-	const onChangeLanguagePress = () => {
-		settings.toggleLanguage();
-		setLevel(0);
-		setAnswers([]);
-		setInput('');
-		setDaily(false);
-	};
 
-	useEffect(() => {
-		setWords(makeWords(language));
-		// console.log(settings.language, settings.theme);
-	}, [settings.language]);
+	const onShare = () => {
+		const message = answers.map((word, i) => (word.length > 0 ? word.toUpperCase() : words[i].toUpperCase())).join('\n');
+		Share.share({ message }).then();
+	};
 
 	return words.length > 0 ? (
 		<View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.backgroundColor }}>
@@ -118,15 +158,29 @@ const Werdly = () => {
 						key={'word' + j}
 						style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
 						layout={Layout}>
-						{answers[j].split('').map((l, i) => (
-							<Square
-								key={word.charAt(i).toUpperCase() + i + l.toUpperCase()}
-								letter={l.toUpperCase()}
-								size={squareSize}
-								color={isUpperCase(l) ? COLOR.GREEN : COLOR.BLUE}
-								textColor={COLOR.DARKBLUE}
-							/>
-						))}
+						{answers[j].length === 0
+							? word
+									.split('')
+									.map((l, i) => (
+										<Square
+											key={l.toUpperCase() + i}
+											letter={l.toUpperCase()}
+											size={squareSize}
+											color={COLOR.WHITE}
+											textColor={COLOR.DARKBLUE}
+										/>
+									))
+							: answers[j]
+									.split('')
+									.map((l, i) => (
+										<Square
+											key={word.charAt(i).toUpperCase() + i + l.toUpperCase()}
+											letter={l.toUpperCase()}
+											size={squareSize}
+											color={isUpperCase(l) ? COLOR.GREEN : COLOR.BLUE}
+											textColor={COLOR.DARKBLUE}
+										/>
+									))}
 					</Animated.View>
 				) : j === level ? (
 					<Animated.View
@@ -137,7 +191,7 @@ const Werdly = () => {
 							const inputLetter = input[i];
 							return (
 								<Square
-									key={l.toUpperCase() + i + inputLetter ?? ''}
+									key={l.toUpperCase() + i + (inputLetter ?? '')}
 									letter={inputLetter ?? (isUpperCase(l) ? l : ' ')}
 									size={squareSize}
 									color={
@@ -165,32 +219,64 @@ const Werdly = () => {
 				onDelPress={onDelPress}
 			/>
 			<Pressable
-				style={{ position: 'absolute', top: Constants.statusBarHeight + 0.5 * iconSize, right: 0.5 * iconSize }}
+				style={{ position: 'absolute', top: Constants.statusBarHeight + 0.5 * iconSize, width: window.width, alignItems: 'center' }}
+				onPress={() => setDaily(true)}>
+				<Text
+					style={{ fontFamily: 'RobotoSlab-Bold', fontSize: 1.25 * iconSize, color: theme.iconColor, opacity: daily ? 1 : 0.4 }}>
+					{(settings.language === 'russian' ? 'Вёрдли' : 'Werdly').toUpperCase()}
+				</Text>
+			</Pressable>
+			<Pressable
+				style={{
+					position: 'absolute',
+					top: Constants.statusBarHeight + 2.25 * iconSize,
+					width: window.width,
+					alignItems: 'center',
+				}}
+				onPress={() => {
+					if (daily) {
+						setDaily(false);
+					} else {
+						setInput('');
+						setAnswers([]);
+						setWords(makeWords(language, false));
+					}
+				}}>
+				<Text
+					style={{ fontFamily: 'RobotoSlab-Bold', fontSize: 0.65 * iconSize, color: theme.iconColor, opacity: daily ? 0.4 : 1 }}>
+					{(settings.language === 'russian'
+						? daily
+							? 'Играть ещё'
+							: 'Рестарт'
+						: daily
+						? 'Play again'
+						: 'Restart'
+					).toUpperCase()}
+				</Text>
+			</Pressable>
+			<Pressable
+				style={{ position: 'absolute', top: Constants.statusBarHeight + 0.5 * iconSize, left: 0.5 * iconSize }}
 				onPress={settings.toggleTheme}>
 				<Ionicons name="moon" size={iconSize} color={theme.iconColor} />
 			</Pressable>
 			<Pressable
-				style={{ position: 'absolute', top: Constants.statusBarHeight + 2 * iconSize, right: 0.5 * iconSize }}
-				onPress={onChangeLanguagePress}>
+				style={{ position: 'absolute', top: Constants.statusBarHeight + 0.5 * iconSize, right: 0.5 * iconSize }}
+				onPress={settings.toggleLanguage}>
 				<Ionicons name="earth" size={iconSize} color={theme.iconColor} />
 			</Pressable>
-			{/*<Pressable*/}
-			{/*	style={{ position: 'absolute', top: Constants.statusBarHeight + 2 * iconSize, right: 2 * iconSize }}*/}
-			{/*	onPress={settings.load}>*/}
-			{/*	<Ionicons name="cloud-upload" size={iconSize} color={COLOR.BLUE} />*/}
-			{/*</Pressable>*/}
-			{/*<Pressable*/}
-			{/*	style={{ position: 'absolute', top: Constants.statusBarHeight + 2 * iconSize, right: 0.5 * iconSize }}*/}
-			{/*	onPress={settings.save}>*/}
-			{/*	<Ionicons name="cloud-download" size={iconSize} color={COLOR.BLUE} />*/}
-			{/*</Pressable>*/}
-			<Pressable
-				style={{ position: 'absolute', top: Constants.statusBarHeight + 0.5 * iconSize, left: 0.5 * iconSize }}
-				onPress={() => null}>
-				<Text style={{ fontFamily: 'RobotoSlab-Bold', fontSize: 0.75 * iconSize, color: theme.iconColor }}>
-					{(settings.language === 'russian' ? (daily ? 'Ежедневный' : 'Случайный') : daily ? 'Daily' : 'Random').toUpperCase()}
-				</Text>
-			</Pressable>
+			{level === words.length && (
+				<Pressable onPress={onShare}>
+					<Text
+						style={{
+							fontFamily: 'RobotoSlab-Bold',
+							fontSize: 0.65 * iconSize,
+							color: theme.iconColor,
+							marginTop: iconSize / 2,
+						}}>
+						{(settings.language === 'russian' ? 'Поделиться' : 'Share').toUpperCase()}
+					</Text>
+				</Pressable>
+			)}
 		</View>
 	) : null;
 };
