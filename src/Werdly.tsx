@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Vibration, Pressable, Text, Alert, Share } from 'react-native';
+import { View, Pressable, Text, Alert, Share } from 'react-native';
 import Square, { COLOR } from './Square';
 import WindowSizeContext from './contexts/WindowSizeContext';
 import Keyboard from './Keyboard';
@@ -11,11 +11,11 @@ import Language, { getLanguage } from './contexts/Language';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 
-const makeWords = (language: Language, daily: boolean = false): Array<string> => {
+const makeWords = (language: Language, daily: boolean = false, include: number = 0.8): Array<string> => {
 	const random = daily ? seedRandom(getDateNumber()) : Math.random;
 	random();
 	return language.vocab
-		.map(words => words[Math.floor(words.length * random())])
+		.map(words => words[Math.floor(include * words.length * random())])
 		.map(word => {
 			const n = Math.floor(word.length / 2);
 			const set = new Set<number>();
@@ -28,7 +28,7 @@ const makeWords = (language: Language, daily: boolean = false): Array<string> =>
 		});
 	// return ['CaSe', 'SCale', 'ChEeSe'];
 };
-// const showWords = (words: Array<string>, lvl: number) => words.map((wrd, i) => (i === lvl ? wrd.toUpperCase() : wrd));
+
 const isUpperCase = (char: string): boolean => char === char.toUpperCase();
 
 const Werdly = () => {
@@ -63,7 +63,7 @@ const Werdly = () => {
 		if (words.length > 0 && words[level] && input.length >= words[level].length) {
 			const doShake = () => {
 				shakeValue.value = withSequence(withTiming(squareSize / 10, { duration: 100 }), withSpring(0, { stiffness: 500 }));
-				Vibration.vibrate();
+				// Vibration.vibrate();
 			};
 			if (language.vocab[level].includes(input.toLowerCase())) {
 				const wordArray = words[level].split('');
@@ -96,8 +96,17 @@ const Werdly = () => {
 	}, [words, input, level, shakeValue, squareSize, language, answers, settings, daily]);
 
 	const onKeyPress = (key: string) => {
-		if (words[level] && input.length < words[level].length) {
-			setInput(input + key);
+		if (words[level]) {
+			let newInput = input;
+			const checkFilledLetters = () => {
+				while (newInput.length < words[level].length && isUpperCase(words[level][newInput.length])) {
+					newInput += words[level][newInput.length];
+				}
+			};
+			checkFilledLetters();
+			newInput += key;
+			checkFilledLetters();
+			setInput(newInput);
 		}
 	};
 
@@ -140,8 +149,15 @@ const Werdly = () => {
 	};
 
 	const onDelPress = () => {
-		if (input.length > 0) {
-			setInput(input.substring(0, input.length - 1));
+		if (input.length === words[level].length) {
+			setInput('');
+		} else if (input.length > 0) {
+			let newInput = input;
+			let i = newInput.length - 1;
+			while (i > 0 && isUpperCase(words[level].charAt(i))) {
+				i--;
+			}
+			setInput(newInput.substring(0, i));
 		}
 	};
 
@@ -188,11 +204,11 @@ const Werdly = () => {
 									.split('')
 									.map((l, i) => (
 										<Square
-											key={word.charAt(i).toUpperCase() + i + l.toUpperCase()}
+											key={word.charAt(i).toUpperCase() + i + (isUpperCase(word.charAt(i)) ? '' : l.toUpperCase())}
 											letter={l.toUpperCase()}
 											size={squareSize}
-											color={isUpperCase(l) ? COLOR.GREEN : COLOR.BLUE}
-											textColor={COLOR.DARKBLUE}
+											color={isUpperCase(l) ? COLOR.BLUE : COLOR.GREEN}
+											textColor={COLOR.WHITE}
 										/>
 									))}
 					</Animated.View>
@@ -205,19 +221,11 @@ const Werdly = () => {
 							const inputLetter = input[i];
 							return (
 								<Square
-									key={l.toUpperCase() + i + (inputLetter ?? '')}
+									key={l.toUpperCase() + i + (isUpperCase(l) ? '' : inputLetter)}
 									letter={inputLetter ?? (isUpperCase(l) ? l : ' ')}
 									size={squareSize}
-									color={
-										inputLetter
-											? isUpperCase(l)
-												? inputLetter === l
-													? COLOR.GREEN
-													: COLOR.RED
-												: COLOR.BLUE
-											: COLOR.WHITE
-									}
-									textColor={inputLetter ? COLOR.WHITE : COLOR.DARKBLUE}
+									color={inputLetter ? (isUpperCase(l) ? COLOR.WHITE : COLOR.GREEN) : COLOR.WHITE}
+									textColor={isUpperCase(l) ? COLOR.DARKBLUE : COLOR.WHITE}
 									isInput={inputLetter !== undefined}
 								/>
 							);
@@ -244,7 +252,7 @@ const Werdly = () => {
 				style={{
 					position: 'absolute',
 					top: Constants.statusBarHeight + 2.25 * iconSize,
-					width: window.width,
+					width: window.width / 3,
 					alignItems: 'center',
 				}}
 				onPress={() => {
