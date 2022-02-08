@@ -7,7 +7,9 @@ export const COLOR = {
 	BLACK: '#000000',
 	GREEN: '#81AA66',
 	BLUE: '#3B95D7',
-	RED: '#D85151',
+	YELLOW: '#D2D837',
+	ORANGE: '#D79E3B',
+	RED: '#FF4343',
 	DARKBLUE: '#24506F',
 };
 

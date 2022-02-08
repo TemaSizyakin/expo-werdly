@@ -8,11 +8,13 @@ import { getDateNumber, seedRandom } from './utils/Random';
 import Theme, { getTheme } from './contexts/Theme';
 import SettingsContext from './contexts/SettingsContext';
 import Language, { getLanguage } from './contexts/Language';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 
-const makeWords = (language: Language, daily: boolean = false, include: number = 0.8): Array<string> => {
-	const random = daily ? seedRandom(getDateNumber()) : Math.random;
+const CHECKMARK_COLORS = [COLOR.RED, COLOR.ORANGE, COLOR.YELLOW, COLOR.GREEN];
+
+const makeWords = (language: Language, daily: number = -1, include: number = 0.8): Array<string> => {
+	const random = daily >= 0 ? seedRandom(getDateNumber() + 10101010 * daily) : Math.random;
 	random();
 	return language.vocab
 		.map(words => words[Math.floor(include * words.length * random())])
@@ -31,6 +33,19 @@ const makeWords = (language: Language, daily: boolean = false, include: number =
 
 const isUpperCase = (char: string): boolean => char === char.toUpperCase();
 
+const getShareTitle = (language: string, withDate: boolean): string => {
+	const title = language === 'english' ? 'Werdly' : 'Вёрдли';
+	if (withDate) {
+		const date = new Date();
+		const day = date.getDate().toString().padStart(2, '0');
+		const month = (date.getMonth() + 1).toString().padStart(2, '0');
+		const year = date.getFullYear().toString();
+		return `${title} - ${day}/${month}/${year}`;
+	} else {
+		return title;
+	}
+};
+
 const Werdly = () => {
 	const window = useContext(WindowSizeContext);
 	const settings = useContext(SettingsContext);
@@ -38,7 +53,7 @@ const Werdly = () => {
 	const language: Language = getLanguage(settings.language);
 	const squareSize = Math.min(window.width, window.height) / 8;
 	const iconSize = squareSize / 2;
-	const [daily, setDaily] = useState(true);
+	const [daily, setDaily] = useState(0);
 	const [words, setWords] = useState<Array<string>>(makeWords(language, daily));
 	const [answers, setAnswers] = useState<Array<string>>([]);
 	const level = answers.length;
@@ -48,23 +63,48 @@ const Werdly = () => {
 		transform: [{ translateX: shakeValue.value }],
 	}));
 	const [isAlert, setIsAlert] = useState(true);
+	const dateNumber = getDateNumber();
+	const [checkmarks, setCheckmarks] = useState<Array<number>>([]);
+	useEffect(() => {
+		const answersData = settings.data.date === dateNumber ? settings.data?.answers?.[settings.language] : undefined;
+		const newCheckmarks = [0, 1, 2, 3, 4]
+			.map(i => (answersData && answersData[i] && answersData[i].length >= 3 ? answersData[i].join('').length : -1))
+			.map(j => (j < 0 ? -1 : j < 4 ? 0 : j < 9 ? 1 : j < 15 ? 2 : 3));
+		setCheckmarks(newCheckmarks);
+	}, [settings.data, settings.language, dateNumber]);
 
 	useEffect(() => {
 		setWords(makeWords(language, daily));
 		setInput('');
-		if (daily && settings.data.date === getDateNumber()) {
-			setAnswers(settings.data?.answers?.[settings.language] ?? []);
+		if (daily >= 0 && settings.data.date === dateNumber) {
+			setAnswers(settings.data?.answers?.[settings.language]?.[daily] ?? []);
 		} else {
 			setAnswers([]);
 		}
-	}, [settings.language, daily, settings.data, language]);
+	}, [settings.language, daily, settings.data, language, dateNumber]);
 
+	const setAndSaveAnswers = (newAnswers: Array<string>) => {
+		setAnswers(newAnswers);
+		setInput('');
+		if (daily >= 0) {
+			const dataAnswers = (settings.data.date === dateNumber ? settings.data.answers : undefined) ?? {};
+			if (!dataAnswers[settings.language]) {
+				dataAnswers[settings.language] = [];
+			}
+			dataAnswers[settings.language][daily] = newAnswers;
+			settings.save({
+				date: dateNumber,
+				answers: dataAnswers,
+			});
+		}
+	};
+
+	const doShake = () => {
+		shakeValue.value = withSequence(withTiming(squareSize / 10, { duration: 100 }), withSpring(0, { stiffness: 500 }));
+		// Vibration.vibrate();
+	};
 	useEffect(() => {
 		if (words.length > 0 && words[level] && input.length >= words[level].length) {
-			const doShake = () => {
-				shakeValue.value = withSequence(withTiming(squareSize / 10, { duration: 100 }), withSpring(0, { stiffness: 500 }));
-				// Vibration.vibrate();
-			};
 			if (language.vocab[level].includes(input.toLowerCase())) {
 				const wordArray = words[level].split('');
 				const casedInput = input
@@ -72,20 +112,7 @@ const Werdly = () => {
 					.map((l, i) => (isUpperCase(wordArray[i]) ? (wordArray[i] === l ? l : '') : l.toLowerCase()))
 					.join('');
 				if (casedInput.length === wordArray.length) {
-					const newAnswers: Array<string> = [...answers, casedInput];
-					setAnswers(newAnswers);
-					setInput('');
-					if (daily) {
-						const prevAnswers = settings.data?.answers;
-						if (settings.data.date === getDateNumber() && prevAnswers) {
-							settings.save({
-								date: getDateNumber(),
-								answers: { ...prevAnswers, [settings.language]: newAnswers },
-							});
-						} else {
-							settings.save({ date: getDateNumber(), answers: { [settings.language]: newAnswers } });
-						}
-					}
+					setAndSaveAnswers([...answers, casedInput]);
 				} else {
 					doShake();
 				}
@@ -93,7 +120,7 @@ const Werdly = () => {
 				doShake();
 			}
 		}
-	}, [words, input, level, shakeValue, squareSize, language, answers, settings, daily]);
+	});
 
 	const onKeyPress = (key: string) => {
 		if (words[level]) {
@@ -111,20 +138,7 @@ const Werdly = () => {
 	};
 
 	const skipWord = () => {
-		const newAnswers = [...answers, ''];
-		setAnswers(newAnswers);
-		setInput('');
-		if (daily) {
-			const prevAnswers = settings.data?.answers;
-			if (settings.data.date === getDateNumber() && prevAnswers) {
-				settings.save({
-					date: getDateNumber(),
-					answers: { ...prevAnswers, [settings.language]: newAnswers },
-				});
-			} else {
-				settings.save({ date: getDateNumber(), answers: { [settings.language]: newAnswers } });
-			}
-		}
+		setAndSaveAnswers([...answers, '']);
 	};
 
 	const onHelpPress = () => {
@@ -162,11 +176,6 @@ const Werdly = () => {
 	};
 
 	const onShare = () => {
-		const title = settings.language === 'english' ? 'Werdly' : 'Вёрдли';
-		const date = new Date();
-		const day = date.getDate().toString().padStart(2, '0');
-		const month = (date.getMonth() + 1).toString().padStart(2, '0');
-		const year = date.getFullYear().toString();
 		const squares = answers.map((answer, i) =>
 			answer.length > 0
 				? answer
@@ -175,8 +184,19 @@ const Werdly = () => {
 						.join('') + ` ${answer.toUpperCase()}`
 				: '⬜'.padEnd(words[i].length, '⬜') + ` ${words[i].toUpperCase()}`,
 		);
-		const header = title + (daily ? ` - ${day}/${month}/${year}` : ' - ♾️');
+		const header = getShareTitle(settings.language, daily >= 0) + (daily >= 0 ? ` (${daily + 1})` : ' - ♾️');
 		const message = [header, ...squares].join('\n');
+		Share.share({ message }).then();
+	};
+
+	const onShareCheckmarks = () => {
+		const header = getShareTitle(settings.language, true);
+		const SQUARES = ['⬜️', '🟥', '🟧', '🟨', '🟩'];
+		const squares = checkmarks.map(mark => SQUARES[mark + 1]).join('');
+		const answered = checkmarks.reduce((acc, cur) => (cur > 0 ? acc + cur : acc), 0);
+		const total = checkmarks.reduce((acc, cur) => (cur < 0 ? acc : acc + 3), 0);
+		const result = `${squares} ${answered}/${total}`;
+		const message = [header, result].join('\n');
 		Share.share({ message }).then();
 	};
 
@@ -240,42 +260,52 @@ const Werdly = () => {
 				onEnterPress={onHelpPress}
 				onDelPress={onDelPress}
 			/>
-			<Pressable
-				style={{ position: 'absolute', top: Constants.statusBarHeight + 0.5 * iconSize, width: window.width, alignItems: 'center' }}
-				onPress={() => setDaily(true)}>
-				<Text
-					style={{ fontFamily: 'RobotoSlab-Bold', fontSize: 1.25 * iconSize, color: theme.iconColor, opacity: daily ? 1 : 0.4 }}>
-					{(settings.language === 'russian' ? 'Вёрдли' : 'Werdly').toUpperCase()}
-				</Text>
-			</Pressable>
-			<Pressable
+			<View
 				style={{
 					position: 'absolute',
-					top: Constants.statusBarHeight + 2.25 * iconSize,
-					width: window.width / 3,
+					top: Constants.statusBarHeight + 0.25 * iconSize,
+					width: window.width,
 					alignItems: 'center',
-				}}
-				onPress={() => {
-					if (daily) {
-						setDaily(false);
-					} else {
-						setInput('');
-						setAnswers([]);
-						setWords(makeWords(language, false));
-					}
 				}}>
 				<Text
-					style={{ fontFamily: 'RobotoSlab-Bold', fontSize: 0.65 * iconSize, color: theme.iconColor, opacity: daily ? 0.4 : 1 }}>
-					{(settings.language === 'russian'
-						? daily
-							? 'Играть ещё'
-							: 'Рестарт'
-						: daily
-						? 'Play again'
-						: 'Restart'
-					).toUpperCase()}
+					style={{
+						fontFamily: 'RobotoSlab-Bold',
+						fontSize: 1.25 * iconSize,
+						color: theme.iconColor,
+					}}>
+					{(settings.language === 'russian' ? 'Вёрдли' : 'Werdly').toUpperCase()}
 				</Text>
-			</Pressable>
+				<View style={{ flexDirection: 'row', alignItems: 'center' }}>
+					<Pressable
+						style={{ marginHorizontal: 0.1 * iconSize, opacity: daily === -1 ? 1 : 0.35 }}
+						onPress={() => {
+							if (daily >= 0) {
+								setDaily(-1);
+							} else {
+								setInput('');
+								setAnswers([]);
+								setWords(makeWords(language, -1));
+							}
+						}}>
+						<FontAwesome5 name="dice" size={iconSize} color={theme.iconColor} />
+					</Pressable>
+					{[0, 1, 2, 3, 4].map(i => (
+						<Pressable
+							key={'check' + i}
+							style={{ marginHorizontal: 0.1 * iconSize, opacity: daily === i ? 1 : 0.5 }}
+							onPress={() => setDaily(i)}>
+							<FontAwesome
+								name="check-square"
+								size={1.25 * iconSize}
+								color={checkmarks[i] < 0 ? theme.iconColor : CHECKMARK_COLORS[checkmarks[i]]}
+							/>
+						</Pressable>
+					))}
+					<Pressable style={{ marginHorizontal: 0.1 * iconSize, opacity: 0.5 }} onPress={onShareCheckmarks}>
+						<FontAwesome name="share" size={iconSize} color={theme.iconColor} />
+					</Pressable>
+				</View>
+			</View>
 			<Pressable
 				style={{ position: 'absolute', top: Constants.statusBarHeight + 0.5 * iconSize, left: 0.5 * iconSize }}
 				onPress={settings.toggleTheme}>

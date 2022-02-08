@@ -11,8 +11,8 @@ const FilePath = FileSystem.documentDirectory + 'settings.json';
 //      "data": {
 //          "date": "20220204",
 //          "answers": {
-//              "russian": ["рыСЬ", "мЕТан", "КупЮРа"]
-//              "english": ["SIlk", "", "AnnUaL"]
+//              "russian": [["мЕТан", "КупЮРа", "аНТоНим"], ["ПОЧта", "рАБоТа", "пИВоваР"]],
+//              "english": [["SIlk", "", "AnnUaL"]]
 //          }
 //      }
 //  }
