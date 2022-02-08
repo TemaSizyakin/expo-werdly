@@ -10,6 +10,8 @@ import SettingsContext from './contexts/SettingsContext';
 import Language, { getLanguage } from './contexts/Language';
 import { Ionicons, FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import Constants from 'expo-constants';
+import LottieView from 'lottie-react-native';
+import Lotties from './res/Lotties';
 
 const CHECKMARK_COLORS = [COLOR.RED, COLOR.ORANGE, COLOR.YELLOW, COLOR.GREEN];
 
@@ -253,13 +255,32 @@ const Werdly = () => {
 					</Animated.View>
 				) : null,
 			)}
-			<Keyboard
-				key={'keyboard_' + settings.language}
-				keyboard={language.keyboard}
-				onKeyPress={onKeyPress}
-				onEnterPress={onHelpPress}
-				onDelPress={onDelPress}
-			/>
+
+			{level >= words.length ? (
+				<View
+					style={{
+						position: 'absolute',
+						width: window.width,
+						height: window.height / 4,
+						left: 0,
+						bottom: 0,
+						alignItems: 'center',
+					}}>
+					<LottieView
+						style={{ width: window.height / 4, height: window.height / 4 }}
+						source={Lotties.shiba[answers.map(a => (a.length > 0 ? '1' : '')).join('').length]}
+						autoPlay
+					/>
+				</View>
+			) : (
+				<Keyboard
+					key={'keyboard_' + settings.language}
+					keyboard={language.keyboard}
+					onKeyPress={onKeyPress}
+					onEnterPress={onHelpPress}
+					onDelPress={onDelPress}
+				/>
+			)}
 			<View
 				style={{
 					position: 'absolute',
@@ -273,11 +294,11 @@ const Werdly = () => {
 						fontSize: 1.25 * iconSize,
 						color: theme.iconColor,
 					}}>
-					{(settings.language === 'russian' ? 'Вёрдли' : 'Werdly').toUpperCase()}
+					{(settings.language === 'russian' ? 'Кятле' : 'Kyatle').toUpperCase()}
 				</Text>
 				<View style={{ flexDirection: 'row', alignItems: 'center' }}>
 					<Pressable
-						style={{ marginHorizontal: 0.1 * iconSize, opacity: daily === -1 ? 1 : 0.35 }}
+						style={{ marginHorizontal: 0.1 * iconSize, opacity: daily === -1 ? 1 : 0.4 }}
 						onPress={() => {
 							if (daily >= 0) {
 								setDaily(-1);
@@ -292,7 +313,7 @@ const Werdly = () => {
 					{[0, 1, 2, 3, 4].map(i => (
 						<Pressable
 							key={'check' + i}
-							style={{ marginHorizontal: 0.1 * iconSize, opacity: daily === i ? 1 : 0.5 }}
+							style={{ marginHorizontal: 0.1 * iconSize, opacity: daily === i ? 1 : 0.6 }}
 							onPress={() => setDaily(i)}>
 							<FontAwesome
 								name="check-square"
