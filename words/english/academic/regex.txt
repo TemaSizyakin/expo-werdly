@@ -1,0 +1,4 @@
+grep ^.* n .*$
+replace [\d-,\,]
+replace ' n ' ...
+grep ^[a-z]{4}$

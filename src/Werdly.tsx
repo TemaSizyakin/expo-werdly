@@ -7,12 +7,13 @@ import Animated, { Layout, useAnimatedStyle, useSharedValue, withTiming, withSeq
 import { getDateNumber, seedRandom } from './utils/Random';
 import Theme, { getTheme } from './contexts/Theme';
 import SettingsContext from './contexts/SettingsContext';
-import Language, { getLanguage } from './contexts/Language';
+import Language, { getLanguage, LanguageType } from './contexts/Language';
 import { Ionicons, FontAwesome, FontAwesome5 } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import LottieView from 'lottie-react-native';
 import Lotties from './res/Lotties';
 
+const TITLE = { english: 'Werdly', russian: 'Вёрдли' };
 const CHECKMARK_COLORS = [COLOR.RED, COLOR.ORANGE, COLOR.YELLOW, COLOR.GREEN];
 
 const makeWords = (language: Language, daily: number = -1, include: number = 0.8): Array<string> => {
@@ -35,8 +36,8 @@ const makeWords = (language: Language, daily: number = -1, include: number = 0.8
 
 const isUpperCase = (char: string): boolean => char === char.toUpperCase();
 
-const getShareTitle = (language: string, withDate: boolean): string => {
-	const title = language === 'english' ? 'Werdly' : 'Вёрдли';
+const getShareTitle = (language: LanguageType, withDate: boolean): string => {
+	const title = TITLE[language];
 	if (withDate) {
 		const date = new Date();
 		const day = date.getDate().toString().padStart(2, '0');
@@ -294,7 +295,7 @@ const Werdly = () => {
 						fontSize: 1.25 * iconSize,
 						color: theme.iconColor,
 					}}>
-					{(settings.language === 'russian' ? 'Кятле' : 'Kyatle').toUpperCase()}
+					{TITLE[settings.language].toUpperCase()}
 				</Text>
 				<View style={{ flexDirection: 'row', alignItems: 'center' }}>
 					<Pressable
