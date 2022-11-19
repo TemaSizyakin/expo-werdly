@@ -3,7 +3,6 @@ import React from 'react';
 import WindowSizeContext, { useWindowSizeContext } from './src/contexts/WindowSizeContext';
 import Werdly from './src/Werdly';
 import { useFonts } from 'expo-font';
-import AppLoading from 'expo-app-loading';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
 import { getTheme } from './src/contexts/Theme';
@@ -16,7 +15,7 @@ function App() {
 
 	const [fontsLoaded] = useFonts({ 'RobotoSlab-Bold': require('./assets/fonts/RobotoSlab-Bold.ttf') });
 	if (!fontsLoaded) {
-		return <AppLoading />;
+		return null;
 	}
 
 	return (

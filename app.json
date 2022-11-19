@@ -2,7 +2,7 @@
   "expo": {
     "name": "werdly",
     "slug": "werdly",
-    "version": "0.9.0",
+    "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "splash": {
@@ -11,7 +11,8 @@
       "backgroundColor": "#2A5C80"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/0b9db149-1c1e-421f-9901-7a62ca31450d"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -25,12 +26,20 @@
         "backgroundColor": "#3B95D7"
       }
     },
-	"androidNavigationBar": {
-	  "barStyle": "light-content",
-	  "backgroundColor": "#2A5C80"
-	},
+    "androidNavigationBar": {
+      "barStyle": "light-content",
+      "backgroundColor": "#2A5C80"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0b9db149-1c1e-421f-9901-7a62ca31450d"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
     }
   }
 }

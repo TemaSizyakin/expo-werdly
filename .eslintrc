@@ -1,9 +1,0 @@
-{
-    "extends": "@react-native-community",
-	"rules": {
-		"no-shadow": "off",
-		"@typescript-eslint/no-shadow": ["error"],
-		"@typescript-eslint/no-unused-vars": ["warn"],
-		"react-native/no-inline-styles": "off"
-	}
-}
